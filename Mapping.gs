@@ -10,7 +10,8 @@ function rebuildModelDictionary() {
   const map = {};
 
   ozonRows.forEach(function (r) {
-    const model = r[8], color = r[9], size = r[10];
+    const model = normalizeText_(r[8]), color = normalizeText_(r[9]), size = normalizeText_(r[10]);
+    if (!isReliableModelValue_(model)) return;
     const key = buildKey_(model, color, size);
     if (!key || key === '||') return;
     map[key] = map[key] || createMappingRow_(model, color, size);
@@ -19,7 +20,8 @@ function rebuildModelDictionary() {
   });
 
   wbRows.forEach(function (r) {
-    const model = r[7], color = r[8], size = r[9];
+    const model = normalizeText_(r[7]), color = normalizeText_(r[8]), size = normalizeText_(r[9]);
+    if (!isReliableModelValue_(model)) return;
     const key = buildKey_(model, color, size);
     if (!key || key === '||') return;
     map[key] = map[key] || createMappingRow_(model, color, size);
@@ -28,7 +30,8 @@ function rebuildModelDictionary() {
   });
 
   onecRows.forEach(function (r) {
-    const model = r[4], color = r[5], size = r[6];
+    const model = normalizeText_(r[4]), color = normalizeText_(r[5]), size = normalizeText_(r[6]);
+    if (!isReliableModelValue_(model)) return;
     const key = buildKey_(model, color, size);
     if (!key || key === '||') return;
     map[key] = map[key] || createMappingRow_(model, color, size);
@@ -56,7 +59,7 @@ function syncModelSettings_() {
   const modelSet = {};
   mapping.forEach(function (r) {
     const model = normalizeText_(r[1]);
-    if (model) modelSet[model] = true;
+    if (isReliableModelValue_(model)) modelSet[model] = true;
   });
 
   const sh = ensureHeaders_(APP_CONFIG.SHEETS.MODEL_SETTINGS, HEADERS.MODEL_SETTINGS);

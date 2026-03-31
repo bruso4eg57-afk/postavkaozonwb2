@@ -38,6 +38,23 @@ function fullRefreshSheet_(sheetName, headers, rows) {
   Logger.log('Full refresh complete for %s. Rows: %s', sheetName, rows ? rows.length : 0);
 }
 
+function clearDataRangeFromRow_(sheet, startRow, width) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < startRow) return;
+  sheet.getRange(startRow, 1, lastRow - startRow + 1, Math.max(width || sheet.getLastColumn(), 1)).clearContent();
+}
+
+function writeDataRows_(sheetName, startRow, headers, rows) {
+  const sh = getOrCreateSheet_(sheetName);
+  const dataWidth = rows && rows.length ? rows[0].length : headers.length;
+  const writeWidth = Math.max(headers.length, dataWidth);
+  clearDataRangeFromRow_(sh, startRow, writeWidth);
+  if (rows && rows.length) {
+    sh.getRange(startRow, 1, rows.length, dataWidth).setValues(rows);
+  }
+  Logger.log('Data write complete for %s from row %s. Rows: %s', sheetName, startRow, rows ? rows.length : 0);
+}
+
 function getScriptProperty_(key) {
   return PropertiesService.getScriptProperties().getProperty(key);
 }
@@ -62,6 +79,32 @@ function normalizeText_(value) {
 
 function buildKey_(model, color, size) {
   return [normalizeText_(model), normalizeText_(color), normalizeText_(size)].join('||').toLowerCase();
+}
+
+function isLikelySizeValue_(value) {
+  const v = normalizeText_(value).toLowerCase();
+  if (!v) return false;
+  if (/^\d{2,3}$/.test(v)) return true; // 40, 170
+  if (/^\d{2,3}\s*\/\s*\d{2,3}(-\d{2,3})?$/.test(v)) return true; // 42/170-176
+  if (/^(xxs|xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|5xl)$/.test(v)) return true;
+  if (/^\d{2,3}[a-zа-я]{0,3}$/.test(v)) return true;
+  return false;
+}
+
+function isLikelyTechIdentifier_(value) {
+  const v = normalizeText_(value);
+  if (!v) return false;
+  if (/^\d{6,}$/.test(v)) return true; // nmID / sku-like numeric
+  if (/^[A-Z0-9_-]{8,}$/i.test(v) && /\d/.test(v)) return true;
+  return false;
+}
+
+function isReliableModelValue_(value) {
+  const v = normalizeText_(value);
+  if (!v) return false;
+  if (isLikelySizeValue_(v)) return false;
+  if (isLikelyTechIdentifier_(v)) return false;
+  return true;
 }
 
 function safeJsonParse_(text, fallback) {

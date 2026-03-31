@@ -39,6 +39,7 @@ function fetchWbData_(token) {
     const sales90 = toNumber_(item.sales90 || item.realization90 || 0);
     const avgOrdersPerDay = sales90 > 0 ? sales90 / 90 : (sales30 > 0 ? sales30 / 30 : 0);
 
+    const parsed = extractWbModelColorSize_(item);
     return [
       timestamp,
       normalizeText_(item.supplierArticle || item.account || ''),
@@ -47,9 +48,9 @@ function fetchWbData_(token) {
       normalizeText_(item.nmId || item.sku || ''),
       normalizeText_(item.barcode || ''),
       normalizeText_(item.subject || item.name || ''),
-      normalizeText_(item.model || item.techSize || ''),
-      normalizeText_(item.color || ''),
-      normalizeText_(item.techSize || item.size || ''),
+      parsed.model,
+      parsed.color,
+      parsed.size,
       normalizeText_(item.category || item.subject || ''),
       toNumber_(item.quantity || item.stock || 0),
       toNumber_(item.quantityFull || item.available || 0),
@@ -61,4 +62,30 @@ function fetchWbData_(token) {
       'WB API'
     ];
   });
+}
+
+function extractWbModelColorSize_(item) {
+  const size = normalizeText_(item.techSize || item.size || '');
+  const color = normalizeText_(item.color || item.colorName || '');
+  const modelCandidates = [
+    item.model,
+    item.modelName,
+    item.imtName
+  ];
+
+  let model = '';
+  for (let i = 0; i < modelCandidates.length; i++) {
+    const candidate = normalizeText_(modelCandidates[i]);
+    if (!candidate) continue;
+    if (!isReliableModelValue_(candidate)) continue;
+    if (size && normalizeText_(candidate).toLowerCase() === size.toLowerCase()) continue;
+    model = candidate;
+    break;
+  }
+
+  return {
+    model: model,
+    color: color,
+    size: size
+  };
 }

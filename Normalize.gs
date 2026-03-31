@@ -22,6 +22,7 @@ function rebuildUnifiedCalculation() {
 
   const agg = {};
   function ensureAgg(model, color, size) {
+    if (!isReliableModelValue_(model)) return null;
     const key = buildKey_(model, color, size);
     if (!agg[key]) {
       agg[key] = {
@@ -42,6 +43,7 @@ function rebuildUnifiedCalculation() {
 
   ozonRows.forEach(function (r) {
     const a = ensureAgg(r[8], r[9], r[10]);
+    if (!a) return;
     a.salesPerDay += toNumber_(r[17]);
     a.ozonAvail += toNumber_(r[13]);
     a.inTransit += toNumber_(r[14]);
@@ -49,6 +51,7 @@ function rebuildUnifiedCalculation() {
 
   wbRows.forEach(function (r) {
     const a = ensureAgg(r[7], r[8], r[9]);
+    if (!a) return;
     a.salesPerDay += toNumber_(r[17]);
     a.wbAvail += toNumber_(r[12]);
     a.inTransit += toNumber_(r[13]);
@@ -56,6 +59,7 @@ function rebuildUnifiedCalculation() {
 
   onecRows.forEach(function (r) {
     const a = ensureAgg(r[4], r[5], r[6]);
+    if (!a) return;
     a.onecStock += toNumber_(r[9]);
     a.inProduction += toNumber_(r[10]);
     a.onecShop += Math.max(toNumber_(r[8]) - toNumber_(r[9]), 0);
@@ -66,6 +70,7 @@ function rebuildUnifiedCalculation() {
     const model = normalizeText_(m[1]);
     const color = normalizeText_(m[2]);
     const size = normalizeText_(m[3]);
+    if (!isReliableModelValue_(model)) return;
     const key = buildKey_(model, color, size);
     const exceptionDecision = shouldIncludeByException_(exclusions, model, color, size);
     const setting = settingsMap[model];
@@ -79,7 +84,7 @@ function rebuildUnifiedCalculation() {
     const days = setting.days;
     const target = speed * days;
     const totalStock = a.ozonAvail + a.wbAvail + a.onecShop + a.onecStock + a.inTransit + a.inProduction;
-    const factDays = a.salesPerDay > 0 ? totalStock / a.salesPerDay : 9999;
+    const factDays = a.salesPerDay > 0 ? totalStock / a.salesPerDay : '';
     const toSew = Math.max(target - totalStock, 0);
 
     rows.push([
@@ -98,7 +103,7 @@ function rebuildUnifiedCalculation() {
       round2_(a.inTransit),
       round2_(a.inProduction),
       round2_(totalStock),
-      round2_(factDays),
+      factDays === '' ? '' : round2_(factDays),
       round2_(toSew),
       0,
       setting.comment
@@ -106,7 +111,9 @@ function rebuildUnifiedCalculation() {
   });
 
   rows.sort(function (a, b) {
-    if (a[15] !== b[15]) return a[15] - b[15];
+    const aDays = a[15] === '' ? Number.POSITIVE_INFINITY : a[15];
+    const bDays = b[15] === '' ? Number.POSITIVE_INFINITY : b[15];
+    if (aDays !== bDays) return aDays - bDays;
     return b[16] - a[16];
   });
 
@@ -119,8 +126,10 @@ function rebuildUnifiedCalculation() {
 }
 
 function readSizeExclusions_() {
-  ensureHeaders_(APP_CONFIG.SHEETS.SIZE_EXCEPTIONS, HEADERS.SIZE_EXCEPTIONS);
-  const rows = readSheetData_(APP_CONFIG.SHEETS.SIZE_EXCEPTIONS, HEADERS.SIZE_EXCEPTIONS.length);
+  const sh = getOrCreateSheet_(APP_CONFIG.SHEETS.SIZE_EXCEPTIONS);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return {};
+  const rows = sh.getRange(2, 1, lastRow - 1, HEADERS.SIZE_EXCEPTIONS.length).getValues();
   const map = {};
   rows.forEach(function (r) {
     const key = buildKey_(r[0], r[1], r[2]);

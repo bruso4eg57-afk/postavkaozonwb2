@@ -51,6 +51,7 @@ function fetchOzonData_(clientId, apiKey) {
     const sales90 = toNumber_(item.sales_90d || item.sales90 || 0);
     const avgOrdersPerDay = sales90 > 0 ? sales90 / 90 : (sales30 > 0 ? sales30 / 30 : 0);
 
+    const parsed = extractOzonModelColorSize_(item);
     return [
       timestamp,
       normalizeText_(item.account || item.cabinet || ''),
@@ -60,9 +61,9 @@ function fetchOzonData_(clientId, apiKey) {
       normalizeText_(item.sku || ''),
       normalizeText_(item.barcode || ''),
       normalizeText_(item.name || item.product_name || ''),
-      normalizeText_(item.model || ''),
-      normalizeText_(item.color || ''),
-      normalizeText_(item.size || ''),
+      parsed.model,
+      parsed.color,
+      parsed.size,
       normalizeText_(item.category || ''),
       toNumber_(item.stock || item.quantity || 0),
       toNumber_(item.available || item.free_to_sell_amount || 0),
@@ -74,4 +75,30 @@ function fetchOzonData_(clientId, apiKey) {
       'Ozon API'
     ];
   });
+}
+
+function extractOzonModelColorSize_(item) {
+  const size = normalizeText_(item.size || item.size_name || '');
+  const color = normalizeText_(item.color || item.color_name || '');
+  const modelCandidates = [
+    item.model,
+    item.model_name,
+    item.product_model
+  ];
+
+  let model = '';
+  for (let i = 0; i < modelCandidates.length; i++) {
+    const candidate = normalizeText_(modelCandidates[i]);
+    if (!candidate) continue;
+    if (!isReliableModelValue_(candidate)) continue;
+    if (size && normalizeText_(candidate).toLowerCase() === size.toLowerCase()) continue;
+    model = candidate;
+    break;
+  }
+
+  return {
+    model: model,
+    color: color,
+    size: size
+  };
 }
