@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.connectors.onec_client import OneCClient
 from src.connectors.ozon_client import OzonClient
@@ -103,7 +103,7 @@ def read_settings() -> dict:
 
 
 def sync_data(settings: dict, cache: CacheRepository, logger):
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.now(timezone.utc).isoformat()
     onec_client = OneCClient(settings["onec_url"], settings["onec_login"], settings["onec_password"])
     wb_client = WbClient(settings["wb_token"])
     oz_client = OzonClient(settings["ozon_client_id"], settings["ozon_api_key"])
@@ -165,7 +165,7 @@ def build_pipeline(settings: dict):
     mapping_pct = 0 if not norm.canonical else round((1 - len(norm.unresolved) / len(norm.canonical)) * 100, 2)
     settings_rows.append({"key": "sku_mapping_pct", "value": mapping_pct})
 
-    logs = [{"ts": datetime.utcnow().isoformat(), "level": "info", "message": "Pipeline completed"}]
+    logs = [{"ts": datetime.now(timezone.utc).isoformat(), "level": "info", "message": "Pipeline completed"}]
 
     return {
         "priority": priority,
@@ -234,7 +234,7 @@ def command_run(_args):
 def command_backfill(args):
     settings = read_settings()
     cache = CacheRepository(settings["cache_db_path"])
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for d in range(args.days):
         ts = (now - timedelta(days=d)).isoformat()
         cache.save_snapshot("backfill", ts, {"day": d}, True, str(d))

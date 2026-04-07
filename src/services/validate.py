@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 REQUIRED_COLUMNS = ["article", "size", "qty", "source_system", "stock_status"]
@@ -8,7 +8,7 @@ REQUIRED_COLUMNS = ["article", "size", "qty", "source_system", "stock_status"]
 
 def validate_canonical(rows: list[dict[str, Any]]) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     present = set()
     for row in rows:
