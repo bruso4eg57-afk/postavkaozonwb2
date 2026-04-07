@@ -86,6 +86,43 @@ def load_yaml(path: str) -> dict:
     return result
 
 
+
+def _fallback_priority_from_canonical(canonical_rows: list[dict]) -> list[dict]:
+    rows = []
+    seen = set()
+    for r in canonical_rows:
+        key = (r.get("article", ""), r.get("size", ""), r.get("color", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "Номенклатура, Артикул": f"{r.get('product_name', '')}, {r.get('article', '')}",
+            "Характеристика": r.get("size", ""),
+            "Остатки Цеховая кладовая": 0,
+            "СРОЧНО": 0,
+            "ПРИОРИТЕТ": 4,
+            "Остатки ИП": 0,
+            "Остатки на WB": 0,
+            "к клиенту": 0,
+            "от клиента": 0,
+            "в пути на склад": 0,
+            "Итого остатков на WB": 0,
+            "Разбивка по размерам в % соотношении": 0,
+            "Ср. скорость заказов в день": 0,
+            "Процент выкупа": 0,
+            "На сколько дней хватает": 9999,
+            "Остатки на Ozon": 0,
+            "к клиенту Ozon": 0,
+            "от клиента Ozon": 0,
+            "в пути на склад Ozon": 0,
+            "Итого остатков на Ozon": 0,
+            "Итого по маркетплейсам": 0,
+            "Рекомендация к пошиву": 0,
+            "Источник дефицита": "Новая карточка без истории",
+            "Комментарий проверки": "Расчётный слой пуст, показан fallback",
+        })
+    return rows
+
 def read_settings() -> dict:
     _load_dotenv()
     return {
@@ -150,6 +187,8 @@ def build_pipeline(settings: dict):
         cache.save_validation(row["ts"], row["level"], row["check_name"], row["details"])
 
     priority = build_priority_table(norm.canonical, business, warehouses)
+    if not priority and norm.canonical:
+        priority = _fallback_priority_from_canonical(norm.canonical)
 
     settings_rows = [
         {"key": "target_cover_days", "value": business.get("target_cover_days")},
@@ -187,6 +226,7 @@ def command_sync(_args):
 def command_validate(_args):
     settings = read_settings()
     res = build_pipeline(settings)
+    print({"priority_rows": len(res["priority"]), "raw_1c": len(res["raw_1c"]), "raw_wb": len(res["raw_wb"]), "raw_oz": len(res["raw_oz"])})
     for row in res["checks"]:
         print(row)
 
