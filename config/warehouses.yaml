@@ -1,0 +1,7 @@
+warehouse_categories:
+  cutting_room:
+    - Цеховая кладовая
+  finished_goods_ip:
+    - Склад ИП
+  ignore:
+    - Брак
