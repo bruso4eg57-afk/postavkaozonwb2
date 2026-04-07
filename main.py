@@ -194,7 +194,7 @@ def command_validate(_args):
 def command_export(_args):
     settings = read_settings()
     res = build_pipeline(settings)
-    export_report(
+    saved_path = export_report(
         settings["output_path"],
         res["priority"],
         res["checks"],
@@ -206,7 +206,7 @@ def command_export(_args):
         res["log"],
         template_path="остатки+ИП(1)_(1).xlsx",
     )
-    print(f"Saved: {settings['output_path']}")
+    print(f"Saved: {saved_path}")
 
 
 def command_run(_args):
