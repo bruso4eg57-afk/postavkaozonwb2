@@ -175,9 +175,10 @@ def build_pipeline(settings: dict):
     business = load_yaml("config/business_rules.yaml")
     warehouses = load_yaml("config/warehouses.yaml")
     aliases = load_yaml("config/sku_aliases.yaml").get("aliases", {})
+    field_mapping_1c = load_yaml("config/field_mapping_1c.yaml")
 
     onec_raw, wb_raw, oz_raw, statuses = sync_data(settings, cache, logger)
-    df_1c = normalize_1c(onec_raw)
+    df_1c = normalize_1c(onec_raw, field_mapping_1c)
     df_wb = normalize_mp(wb_raw, "WB")
     df_oz = normalize_mp(oz_raw, "Ozon")
     norm = unify_sku(df_1c, df_wb, df_oz, aliases)

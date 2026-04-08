@@ -29,27 +29,48 @@ def _row_signature(row: dict[str, Any]) -> tuple:
     return tuple(sorted((str(k), str(v)) for k, v in row.items()))
 
 
-def normalize_1c(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _canonicalize_key(key: str) -> str:
+    return str(key).strip().lower().replace(" ", "").replace("_", "")
+
+
+def _pick_field(row: dict[str, Any], candidates: list[str], default: Any = "") -> Any:
+    if not candidates:
+        return default
+    cmap = {_canonicalize_key(k): v for k, v in row.items()}
+    for c in candidates:
+        ck = _canonicalize_key(c)
+        if ck in cmap and cmap[ck] not in (None, ""):
+            return cmap[ck]
+    return default
+
+
+def normalize_1c(records: list[dict[str, Any]], field_mapping: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    fields_cfg = (field_mapping or {}).get("fields", {})
+
+    def cands(name: str, defaults: list[str]) -> list[str]:
+        value = fields_cfg.get(name, defaults)
+        return value if isinstance(value, list) else defaults
+
     for r in records:
         rows.append(
             {
                 "source_system": "1C",
-                "organization": r.get("organization", "Unknown"),
+                "organization": _pick_field(r, cands("organization", ["organization"]), "Unknown"),
                 "marketplace": "1C",
-                "article": r.get("article", ""),
-                "model_name": r.get("model_name", ""),
-                "product_name": r.get("product_name", ""),
-                "color": r.get("color", ""),
-                "size": r.get("size", ""),
-                "characteristic": r.get("characteristic", ""),
-                "barcode": str(r.get("barcode", "")),
-                "warehouse_name": r.get("warehouse_name", ""),
+                "article": str(_pick_field(r, cands("article", ["article", "Артикул", "sku"]), "")),
+                "model_name": str(_pick_field(r, cands("model_name", ["model_name", "Модель"]), "")),
+                "product_name": str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), "")),
+                "color": str(_pick_field(r, cands("color", ["color", "Цвет"]), "")),
+                "size": str(_pick_field(r, cands("size", ["size", "Размер"]), "")),
+                "characteristic": str(_pick_field(r, cands("characteristic", ["characteristic", "Характеристика"]), "")),
+                "barcode": str(_pick_field(r, cands("barcode", ["barcode", "Штрихкод"]), "")),
+                "warehouse_name": str(_pick_field(r, cands("warehouse_name", ["warehouse_name", "Склад"]), "")),
                 "stock_status": "sellable",
-                "qty": float(r.get("qty", 0) or 0),
-                "onec_nomenclature": r.get("product_name", ""),
-                "orders": float(r.get("orders", 0) or 0),
-                "sales": float(r.get("sales", 0) or 0),
+                "qty": float(_pick_field(r, cands("qty", ["qty", "quantity", "Остаток"]), 0) or 0),
+                "onec_nomenclature": str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), "")),
+                "orders": float(_pick_field(r, ["orders"], 0) or 0),
+                "sales": float(_pick_field(r, ["sales"], 0) or 0),
             }
         )
     return rows

@@ -15,3 +15,11 @@ def test_unify_deduplicates_exact_rows():
     res = unify_sku(onec, onec.copy(), [], {})
     assert len(res.canonical) == 1
     assert res.removed_duplicates >= 1
+
+
+def test_normalize_1c_with_russian_field_names():
+    mapping = {"fields": {"article": ["Артикул"], "size": ["Размер"], "qty": ["Остаток"], "warehouse_name": ["Склад"]}}
+    rows = normalize_1c([{"Артикул": "RU-1", "Размер": "42", "Остаток": 5, "Склад": "Цех"}], mapping)
+    assert rows[0]["article"] == "RU-1"
+    assert rows[0]["size"] == "42"
+    assert rows[0]["qty"] == 5.0
