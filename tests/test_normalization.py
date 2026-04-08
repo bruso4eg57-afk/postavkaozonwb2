@@ -8,3 +8,10 @@ def test_normalization_and_unknown_fields():
     res = unify_sku(onec, wb, oz, {})
     assert len(res.canonical) == 3
     assert "sku_key" in res.canonical[0]
+
+
+def test_unify_deduplicates_exact_rows():
+    onec = normalize_1c([{"article": "A", "size": "M", "qty": 1, "warehouse_name": "Цеховая кладовая"}])
+    res = unify_sku(onec, onec.copy(), [], {})
+    assert len(res.canonical) == 1
+    assert res.removed_duplicates >= 1

@@ -18,10 +18,15 @@ STATUS_MAP = {
 class NormalizeResult:
     canonical: list[dict[str, Any]]
     unresolved: list[dict[str, Any]]
+    removed_duplicates: int = 0
 
 
 def _norm_status(value: str) -> str:
     return STATUS_MAP.get(str(value).strip().lower(), "sellable")
+
+
+def _row_signature(row: dict[str, Any]) -> tuple:
+    return tuple(sorted((str(k), str(v)) for k, v in row.items()))
 
 
 def normalize_1c(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -79,8 +84,20 @@ def normalize_mp(records: list[dict[str, Any]], source: str) -> list[dict[str, A
 
 
 def unify_sku(onec: list[dict[str, Any]], wb: list[dict[str, Any]], ozon: list[dict[str, Any]], aliases: dict[str, str]) -> NormalizeResult:
-    canonical = [*onec, *wb, *ozon]
-    for row in canonical:
+    raw_rows = [*onec, *wb, *ozon]
+    for row in raw_rows:
         row["sku_key"] = str(row.get("barcode") or "") or f"{row.get('article', '')}|{row.get('size', '')}|{row.get('color', '')}" or aliases.get(row.get("article", ""), "")
-    unresolved = [r for r in canonical if not r.get("article") or not r.get("size")]
-    return NormalizeResult(canonical=canonical, unresolved=unresolved)
+
+    deduped: list[dict[str, Any]] = []
+    seen = set()
+    removed = 0
+    for row in raw_rows:
+        sig = _row_signature(row)
+        if sig in seen:
+            removed += 1
+            continue
+        seen.add(sig)
+        deduped.append(row)
+
+    unresolved = [r for r in deduped if not r.get("article") or not r.get("size")]
+    return NormalizeResult(canonical=deduped, unresolved=unresolved, removed_duplicates=removed)

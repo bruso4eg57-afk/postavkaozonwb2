@@ -183,6 +183,8 @@ def build_pipeline(settings: dict):
     norm = unify_sku(df_1c, df_wb, df_oz, aliases)
 
     checks = validate_canonical(norm.canonical)
+    if norm.removed_duplicates > 0:
+        checks.insert(0, {"ts": datetime.now(timezone.utc).isoformat(), "level": "info", "check_name": "deduplication", "details": f"removed_duplicates={norm.removed_duplicates}"})
     for row in checks:
         cache.save_validation(row["ts"], row["level"], row["check_name"], row["details"])
 
