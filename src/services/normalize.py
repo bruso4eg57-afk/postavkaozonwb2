@@ -53,11 +53,11 @@ def normalize_1c(records: list[dict[str, Any]], field_mapping: dict[str, Any] | 
         return value if isinstance(value, list) else defaults
 
     for r in records:
-        product_name = str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), ""))
-        article = str(_pick_field(r, cands("article", ["article", "Артикул", "sku"]), ""))
-        characteristic = str(_pick_field(r, cands("characteristic", ["characteristic", "Характеристика"]), ""))
-        size = str(_pick_field(r, cands("size", ["size", "Размер"]), ""))
-        barcode = str(_pick_field(r, cands("barcode", ["barcode", "Штрихкод"]), ""))
+        product_name = str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура", "name", "Наименование"]), ""))
+        article = str(_pick_field(r, cands("article", ["article", "Артикул", "sku", "code", "Код"]), ""))
+        characteristic = str(_pick_field(r, cands("characteristic", ["characteristic", "Характеристика", "char", "ХарактеристикаНоменклатуры"]), ""))
+        size = str(_pick_field(r, cands("size", ["size", "Размер", "tech_size", "Размер1"]), ""))
+        barcode = str(_pick_field(r, cands("barcode", ["barcode", "Штрихкод", "ean", "EAN13"]), ""))
 
         if not article and product_name:
             article = product_name[:64]
@@ -76,9 +76,9 @@ def normalize_1c(records: list[dict[str, Any]], field_mapping: dict[str, Any] | 
                 "size": size,
                 "characteristic": characteristic,
                 "barcode": barcode,
-                "warehouse_name": str(_pick_field(r, cands("warehouse_name", ["warehouse_name", "Склад"]), "")),
+                "warehouse_name": str(_pick_field(r, cands("warehouse_name", ["warehouse_name", "Склад", "warehouse", "stock_name"]), "")),
                 "stock_status": "sellable",
-                "qty": float(_pick_field(r, cands("qty", ["qty", "quantity", "Остаток"]), 0) or 0),
+                "qty": float(_pick_field(r, cands("qty", ["qty", "quantity", "Остаток", "остаток", "stock", "amount"]), 0) or 0),
                 "onec_nomenclature": product_name,
                 "orders": float(_pick_field(r, ["orders"], 0) or 0),
                 "sales": float(_pick_field(r, ["sales"], 0) or 0),

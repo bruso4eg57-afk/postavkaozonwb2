@@ -29,3 +29,11 @@ def test_normalize_1c_fallback_article_and_size():
     rows = normalize_1c([{"Номенклатура": "Платье X", "Характеристика": "44"}], {"fields": {"product_name": ["Номенклатура"], "characteristic": ["Характеристика"]}})
     assert rows[0]["article"] == "Платье X"
     assert rows[0]["size"] == "44"
+
+
+def test_normalize_1c_name_code_defaults():
+    rows = normalize_1c([{"name": "Юбка", "code": "ART-CODE", "characteristic": "46", "amount": 3, "warehouse": "Склад 1"}])
+    assert rows[0]["product_name"] == "Юбка"
+    assert rows[0]["article"] == "ART-CODE"
+    assert rows[0]["size"] == "46"
+    assert rows[0]["qty"] == 3.0
