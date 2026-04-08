@@ -31,7 +31,11 @@ class OneCClient:
                     token = base64.b64encode(f"{self.login}:{self.password}".encode()).decode()
                     req.add_header("Authorization", f"Basic {token}")
                 with urlopen(req, timeout=30) as resp:
-                    payload = json.loads(resp.read().decode("utf-8"))
+                    raw = resp.read()
+                    try:
+                        payload = json.loads(raw.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        payload = json.loads(raw.decode("utf-8-sig"))
                 records = payload if isinstance(payload, list) else payload.get("value") or payload.get("items") or payload.get("data") or []
                 return records, hashlib.md5(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
             except URLError as exc:
