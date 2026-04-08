@@ -23,3 +23,9 @@ def test_normalize_1c_with_russian_field_names():
     assert rows[0]["article"] == "RU-1"
     assert rows[0]["size"] == "42"
     assert rows[0]["qty"] == 5.0
+
+
+def test_normalize_1c_fallback_article_and_size():
+    rows = normalize_1c([{"Номенклатура": "Платье X", "Характеристика": "44"}], {"fields": {"product_name": ["Номенклатура"], "characteristic": ["Характеристика"]}})
+    assert rows[0]["article"] == "Платье X"
+    assert rows[0]["size"] == "44"

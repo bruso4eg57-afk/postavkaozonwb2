@@ -53,22 +53,33 @@ def normalize_1c(records: list[dict[str, Any]], field_mapping: dict[str, Any] | 
         return value if isinstance(value, list) else defaults
 
     for r in records:
+        product_name = str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), ""))
+        article = str(_pick_field(r, cands("article", ["article", "Артикул", "sku"]), ""))
+        characteristic = str(_pick_field(r, cands("characteristic", ["characteristic", "Характеристика"]), ""))
+        size = str(_pick_field(r, cands("size", ["size", "Размер"]), ""))
+        barcode = str(_pick_field(r, cands("barcode", ["barcode", "Штрихкод"]), ""))
+
+        if not article and product_name:
+            article = product_name[:64]
+        if not size and characteristic:
+            size = characteristic
+
         rows.append(
             {
                 "source_system": "1C",
                 "organization": _pick_field(r, cands("organization", ["organization"]), "Unknown"),
                 "marketplace": "1C",
-                "article": str(_pick_field(r, cands("article", ["article", "Артикул", "sku"]), "")),
-                "model_name": str(_pick_field(r, cands("model_name", ["model_name", "Модель"]), "")),
-                "product_name": str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), "")),
+                "article": article,
+                "model_name": str(_pick_field(r, cands("model_name", ["model_name", "Модель"]), "")) or product_name,
+                "product_name": product_name,
                 "color": str(_pick_field(r, cands("color", ["color", "Цвет"]), "")),
-                "size": str(_pick_field(r, cands("size", ["size", "Размер"]), "")),
-                "characteristic": str(_pick_field(r, cands("characteristic", ["characteristic", "Характеристика"]), "")),
-                "barcode": str(_pick_field(r, cands("barcode", ["barcode", "Штрихкод"]), "")),
+                "size": size,
+                "characteristic": characteristic,
+                "barcode": barcode,
                 "warehouse_name": str(_pick_field(r, cands("warehouse_name", ["warehouse_name", "Склад"]), "")),
                 "stock_status": "sellable",
                 "qty": float(_pick_field(r, cands("qty", ["qty", "quantity", "Остаток"]), 0) or 0),
-                "onec_nomenclature": str(_pick_field(r, cands("product_name", ["product_name", "Номенклатура"]), "")),
+                "onec_nomenclature": product_name,
                 "orders": float(_pick_field(r, ["orders"], 0) or 0),
                 "sales": float(_pick_field(r, ["sales"], 0) or 0),
             }
@@ -120,5 +131,5 @@ def unify_sku(onec: list[dict[str, Any]], wb: list[dict[str, Any]], ozon: list[d
         seen.add(sig)
         deduped.append(row)
 
-    unresolved = [r for r in deduped if not r.get("article") or not r.get("size")]
+    unresolved = [r for r in deduped if (not r.get("article") and not r.get("barcode")) or (not r.get("size") and not r.get("characteristic"))]
     return NormalizeResult(canonical=deduped, unresolved=unresolved, removed_duplicates=removed)
