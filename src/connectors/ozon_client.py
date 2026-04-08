@@ -14,14 +14,28 @@ class OzonClient:
         self.report_days_window = report_days_window
 
     def _post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
-        req = Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
-        req.add_header("Client-Id", self.client_id)
-        req.add_header("Api-Key", self.api_key)
-        req.add_header("Content-Type", "application/json")
-        with urlopen(req, timeout=40) as resp:
-            raw = resp.read().decode("utf-8")
-        obj = json.loads(raw)
-        return obj if isinstance(obj, dict) else {}
+        urls = [url]
+        if '/v3/' in url:
+            urls.append(url.replace('/v3/', '/v2/'))
+        if '/v2/' in url:
+            urls.append(url.replace('/v2/', '/v3/'))
+
+        last_exc = None
+        for u in urls:
+            try:
+                req = Request(u, data=json.dumps(payload).encode("utf-8"), method="POST")
+                req.add_header("Client-Id", self.client_id)
+                req.add_header("Api-Key", self.api_key)
+                req.add_header("Content-Type", "application/json")
+                with urlopen(req, timeout=40) as resp:
+                    raw = resp.read().decode("utf-8")
+                obj = json.loads(raw)
+                return obj if isinstance(obj, dict) else {}
+            except Exception as exc:
+                last_exc = exc
+                continue
+        raise RuntimeError(str(last_exc))
+
 
     def fetch(self) -> tuple[list[dict[str, Any]], str]:
         if not self.client_id or not self.api_key:
@@ -33,13 +47,13 @@ class OzonClient:
             return data, hashlib.md5(str(data).encode()).hexdigest()
 
         stocks_payload = {"filter": {"visibility": "ALL"}, "limit": 1000}
-        stocks_resp = self._post_json("https://api-seller.ozon.ru/v3/product/info/stocks", stocks_payload)
+        stocks_resp = self._post_json("https://api-seller.ozon.ru/v2/product/info/stocks", stocks_payload)
         items = stocks_resp.get("result", {}).get("items", []) if isinstance(stocks_resp.get("result"), dict) else []
 
         # Optional postings to estimate orders/sales
         date_from = (datetime.now(timezone.utc) - timedelta(days=self.report_days_window)).strftime("%Y-%m-%dT00:00:00Z")
         postings_payload = {"dir": "ASC", "filter": {"since": date_from, "to": datetime.now(timezone.utc).strftime("%Y-%m-%dT23:59:59Z")}, "limit": 1000, "offset": 0}
-        postings_resp = self._post_json("https://api-seller.ozon.ru/v3/posting/fbo/list", postings_payload)
+        postings_resp = self._post_json("https://api-seller.ozon.ru/v2/posting/fbo/list", postings_payload)
         postings = postings_resp.get("result", []) if isinstance(postings_resp.get("result"), list) else []
 
         by_offer: dict[str, dict[str, float]] = {}

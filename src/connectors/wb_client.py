@@ -13,12 +13,21 @@ class WbClient:
         self.report_days_window = report_days_window
 
     def _get_json(self, url: str) -> list[dict[str, Any]]:
-        req = Request(url)
-        req.add_header("Authorization", self.token)
-        with urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8")
-        data = json.loads(raw)
-        return data if isinstance(data, list) else []
+        auth_variants = [self.token, f"Bearer {self.token}"]
+        last_exc = None
+        for auth in auth_variants:
+            try:
+                req = Request(url)
+                req.add_header("Authorization", auth)
+                with urlopen(req, timeout=30) as resp:
+                    raw = resp.read().decode("utf-8")
+                data = json.loads(raw)
+                return data if isinstance(data, list) else []
+            except Exception as exc:
+                last_exc = exc
+                continue
+        raise RuntimeError(str(last_exc))
+
 
     def fetch(self) -> tuple[list[dict[str, Any]], str]:
         # Demo mode fallback
