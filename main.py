@@ -136,14 +136,15 @@ def read_settings() -> dict:
         "timezone": os.getenv("TIMEZONE", "Europe/Moscow"),
         "cache_db_path": os.getenv("CACHE_DB_PATH", "data/cache.db"),
         "output_path": os.getenv("OUTPUT_PATH", "output/production_plan.xlsx"),
+        "report_days_window": int(os.getenv("REPORT_DAYS_WINDOW", "30") or "30"),
     }
 
 
 def sync_data(settings: dict, cache: CacheRepository, logger):
     ts = datetime.now(timezone.utc).isoformat()
     onec_client = OneCClient(settings["onec_url"], settings["onec_login"], settings["onec_password"])
-    wb_client = WbClient(settings["wb_token"])
-    oz_client = OzonClient(settings["ozon_client_id"], settings["ozon_api_key"])
+    wb_client = WbClient(settings["wb_token"], settings.get("report_days_window", 30))
+    oz_client = OzonClient(settings["ozon_client_id"], settings["ozon_api_key"], settings.get("report_days_window", 30))
 
     def fetch_with_cache(source: str, fn):
         try:
