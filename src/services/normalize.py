@@ -131,5 +131,9 @@ def unify_sku(onec: list[dict[str, Any]], wb: list[dict[str, Any]], ozon: list[d
         seen.add(sig)
         deduped.append(row)
 
-    unresolved = [r for r in deduped if (not r.get("article") and not r.get("barcode")) or (not r.get("size") and not r.get("characteristic"))]
+    unresolved = [
+        r for r in deduped
+        if float(r.get("qty", 0) or 0) > 0
+        and ((not r.get("article") and not r.get("barcode")) or (not r.get("size") and not r.get("characteristic")))
+    ]
     return NormalizeResult(canonical=deduped, unresolved=unresolved, removed_duplicates=removed)

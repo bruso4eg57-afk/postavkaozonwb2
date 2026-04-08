@@ -37,3 +37,9 @@ def test_normalize_1c_name_code_defaults():
     assert rows[0]["article"] == "ART-CODE"
     assert rows[0]["size"] == "46"
     assert rows[0]["qty"] == 3.0
+
+
+def test_unresolved_skips_zero_qty_rows():
+    onec = normalize_1c([{"qty": 0, "warehouse_name": "Склад"}])
+    res = unify_sku(onec, [], [], {})
+    assert len(res.unresolved) == 0
