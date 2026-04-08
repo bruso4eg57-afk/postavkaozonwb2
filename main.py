@@ -229,7 +229,7 @@ def command_sync(_args):
 def command_validate(_args):
     settings = read_settings()
     res = build_pipeline(settings)
-    print({"priority_rows": len(res["priority"]), "raw_1c": len(res["raw_1c"]), "raw_wb": len(res["raw_wb"]), "raw_oz": len(res["raw_oz"])})
+    print({"priority_rows": len(res["priority"]), "raw_1c": len(res["raw_1c"]), "raw_wb": len(res["raw_wb"]), "raw_oz": len(res["raw_oz"]), "unresolved_rows": len(res["unresolved"]), "settings_rows": len(res["settings"])})
     for row in res["checks"]:
         print(row)
 
