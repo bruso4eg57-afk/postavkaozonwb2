@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.request import Request, urlopen
@@ -16,16 +17,21 @@ class WbClient:
         auth_variants = [self.token, f"Bearer {self.token}"]
         last_exc = None
         for auth in auth_variants:
-            try:
-                req = Request(url)
-                req.add_header("Authorization", auth)
-                with urlopen(req, timeout=30) as resp:
-                    raw = resp.read().decode("utf-8")
-                data = json.loads(raw)
-                return data if isinstance(data, list) else []
-            except Exception as exc:
-                last_exc = exc
-                continue
+            for attempt in range(4):
+                try:
+                    req = Request(url)
+                    req.add_header("Authorization", auth)
+                    with urlopen(req, timeout=30) as resp:
+                        raw = resp.read().decode("utf-8")
+                    data = json.loads(raw)
+                    return data if isinstance(data, list) else []
+                except Exception as exc:
+                    last_exc = exc
+                    msg = str(exc)
+                    if "429" in msg:
+                        time.sleep(1.5 * (attempt + 1))
+                        continue
+                    break
         raise RuntimeError(str(last_exc))
 
 

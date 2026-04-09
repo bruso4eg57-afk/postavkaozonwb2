@@ -47,14 +47,38 @@ class OzonClient:
             return data, hashlib.md5(str(data).encode()).hexdigest()
 
         stocks_payload = {"filter": {"visibility": "ALL"}, "limit": 1000}
-        stocks_resp = self._post_json("https://api-seller.ozon.ru/v2/product/info/stocks", stocks_payload)
+        stock_urls = [
+            "https://api-seller.ozon.ru/v2/product/info/stocks",
+            "https://api-seller.ozon.ru/v3/product/info/stocks",
+            "https://api-seller.ozon.ru/v4/product/info/stocks",
+        ]
+        stocks_resp = {}
+        for u in stock_urls:
+            try:
+                stocks_resp = self._post_json(u, stocks_payload)
+                if stocks_resp:
+                    break
+            except Exception:
+                continue
         items = stocks_resp.get("result", {}).get("items", []) if isinstance(stocks_resp.get("result"), dict) else []
 
         # Optional postings to estimate orders/sales
         date_from = (datetime.now(timezone.utc) - timedelta(days=self.report_days_window)).strftime("%Y-%m-%dT00:00:00Z")
         postings_payload = {"dir": "ASC", "filter": {"since": date_from, "to": datetime.now(timezone.utc).strftime("%Y-%m-%dT23:59:59Z")}, "limit": 1000, "offset": 0}
-        postings_resp = self._post_json("https://api-seller.ozon.ru/v2/posting/fbo/list", postings_payload)
-        postings = postings_resp.get("result", []) if isinstance(postings_resp.get("result"), list) else []
+        postings = []
+        posting_urls = [
+            "https://api-seller.ozon.ru/v2/posting/fbo/list",
+            "https://api-seller.ozon.ru/v3/posting/fbo/list",
+            "https://api-seller.ozon.ru/v2/posting/fbs/list",
+        ]
+        for u in posting_urls:
+            try:
+                postings_resp = self._post_json(u, postings_payload)
+                postings = postings_resp.get("result", []) if isinstance(postings_resp.get("result"), list) else []
+                if postings:
+                    break
+            except Exception:
+                continue
 
         by_offer: dict[str, dict[str, float]] = {}
         for p in postings:
