@@ -1,0 +1,13 @@
+paths:
+  records: [items, value, data]
+fields:
+  article: [article, Артикул, sku]
+  model_name: [model_name, Модель]
+  product_name: [product_name, Номенклатура]
+  color: [color, Цвет]
+  size: [size, Размер]
+  characteristic: [characteristic, Характеристика]
+  barcode: [barcode, Штрихкод]
+  warehouse_name: [warehouse_name, Склад]
+  qty: [qty, quantity, Остаток]
+  organization: [organization, Организация]
