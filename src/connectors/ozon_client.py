@@ -51,16 +51,30 @@ class OzonClient:
             "https://api-seller.ozon.ru/v2/product/info/stocks",
             "https://api-seller.ozon.ru/v3/product/info/stocks",
             "https://api-seller.ozon.ru/v4/product/info/stocks",
+            "https://api-seller.ozon.ru/v1/analytics/stock_on_warehouses",
+            "https://api-seller.ozon.ru/v1/product/list",
         ]
         stocks_resp = {}
         for u in stock_urls:
             try:
-                stocks_resp = self._post_json(u, stocks_payload)
+                payload = stocks_payload
+                if "stock_on_warehouses" in u:
+                    payload = {"limit": 1000, "offset": 0, "warehouse_type": "ALL"}
+                if u.endswith('/v1/product/list'):
+                    payload = {"filter": {"visibility": "ALL"}, "last_id": "", "limit": 1000}
+                stocks_resp = self._post_json(u, payload)
                 if stocks_resp:
                     break
             except Exception:
                 continue
-        items = stocks_resp.get("result", {}).get("items", []) if isinstance(stocks_resp.get("result"), dict) else []
+
+        result_obj = stocks_resp.get("result")
+        if isinstance(result_obj, dict):
+            items = result_obj.get("items") or result_obj.get("rows") or []
+        elif isinstance(result_obj, list):
+            items = result_obj
+        else:
+            items = []
 
         # Optional postings to estimate orders/sales
         date_from = (datetime.now(timezone.utc) - timedelta(days=self.report_days_window)).strftime("%Y-%m-%dT00:00:00Z")
@@ -95,7 +109,9 @@ class OzonClient:
             sku = str(it.get("product_id", ""))
             present = 0.0
             for st in it.get("stocks", []) or []:
-                present += float(st.get("present", 0) or 0)
+                present += float(st.get("present", st.get("free_to_sell_amount", 0)) or 0)
+            if present == 0:
+                present = float(it.get("present", it.get("free_to_sell_amount", it.get("stock", 0))) or 0)
             extra = by_offer.get(offer, {"orders": 0.0, "sales": 0.0})
             data.append({
                 "article": offer,
