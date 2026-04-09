@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import json
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 from datetime import datetime, timedelta, timezone
 
 from src.connectors.onec_client import OneCClient
@@ -275,6 +278,52 @@ def command_run(_args):
     run_scheduler(settings["refresh_cron"], settings["timezone"], task)
 
 
+
+def command_debug_api(_args):
+    settings = read_settings()
+
+    def try_get(url: str, headers: dict[str, str]):
+        try:
+            req = Request(url)
+            for k, v in headers.items():
+                req.add_header(k, v)
+            with urlopen(req, timeout=20) as resp:
+                print({"url": url, "status": resp.status})
+        except HTTPError as e:
+            print({"url": url, "status": e.code, "error": "HTTPError"})
+        except Exception as e:
+            print({"url": url, "status": "ERR", "error": str(e)[:160]})
+
+    def try_post(url: str, headers: dict[str, str], payload: dict):
+        try:
+            req = Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
+            for k, v in headers.items():
+                req.add_header(k, v)
+            with urlopen(req, timeout=20) as resp:
+                print({"url": url, "status": resp.status})
+        except HTTPError as e:
+            print({"url": url, "status": e.code, "error": "HTTPError"})
+        except Exception as e:
+            print({"url": url, "status": "ERR", "error": str(e)[:160]})
+
+    if settings.get("wb_token"):
+        date_from = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00")
+        print("WB probes:")
+        for auth in [settings["wb_token"], f"Bearer {settings['wb_token']}"]:
+            print({"auth_prefix": auth[:8] + "..."})
+            try_get(f"https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}", {"Authorization": auth})
+    else:
+        print("WB token is empty")
+
+    if settings.get("ozon_client_id") and settings.get("ozon_api_key"):
+        print("Ozon probes:")
+        headers = {"Client-Id": settings["ozon_client_id"], "Api-Key": settings["ozon_api_key"], "Content-Type": "application/json"}
+        payload = {"filter": {"visibility": "ALL"}, "limit": 1}
+        try_post("https://api-seller.ozon.ru/v2/product/info/stocks", headers, payload)
+        try_post("https://api-seller.ozon.ru/v3/product/info/stocks", headers, payload)
+    else:
+        print("Ozon credentials are empty")
+
 def command_backfill(args):
     settings = read_settings()
     cache = CacheRepository(settings["cache_db_path"])
@@ -292,6 +341,7 @@ def build_parser():
     sub.add_parser("validate").set_defaults(func=command_validate)
     sub.add_parser("export").set_defaults(func=command_export)
     sub.add_parser("run").set_defaults(func=command_run)
+    sub.add_parser("debug-api").set_defaults(func=command_debug_api)
     p = sub.add_parser("backfill")
     p.add_argument("--days", type=int, default=90)
     p.set_defaults(func=command_backfill)
