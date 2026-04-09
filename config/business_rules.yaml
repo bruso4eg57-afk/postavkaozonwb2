@@ -1,0 +1,16 @@
+report_days_window: 30
+buyout_window_days: 35
+target_cover_days: 21
+critical_cover_days: 7
+high_cover_days: 14
+medium_cover_days: 21
+min_buyout_pct: 0.45
+urgent:
+  max_batch: 300
+  min_batch: 10
+  round_to: 5
+  top_sizes: [M, L]
+production:
+  round_to_pack: 5
+status_groups_for_cover:
+  include: [sellable, to_client, from_client, in_transit_to_warehouse]
